@@ -156,6 +156,13 @@
   
   
 ***
+###git 查看修改邮箱
+	先查看用户名：git config user.name
+	在查看邮  箱：git config user.email
+	
+	修改：
+	git config --global user.name "xiayiye5"
+	git config --global user.email "13343401268@qq.com"
 
 ##[Eclipse和git的操作](https://www.cnblogs.com/jpfss/p/8027347.html)
 
