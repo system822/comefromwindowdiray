@@ -79,68 +79,320 @@
 
 ###12/8/2019 6:31:02 PM 
 ####Jakarta DBCP的使用
-一 导入对应的jar包
-二 [配置dbcp.properties](https://blog.csdn.net/xiaogutou1/article/details/18465069)
-***
-	连接设置
-		mysql
-		driverClassName=com.mysql.jdbc.Driver
-		url=jdbc:mysql://localhost:3306/examdb34
-		username=root
-		password=123456
-		
-		oracle
-		url=jdbc:oracle:thin:@localhost:1521:xe
-		d#riverClassName=oracle.jdbc.OracleDriver
-		username=system
-		password=123456
-	
-	c初始化链接
-		initialSize=10
-	最大链接数
-		maxActive=50
-	<!-- 最大空闲链接 -->
-		maxIdle=20
-	<!-- 最小空闲链接-->
-		minIdle=5
-	<!-- 超时等待时间以毫秒为单位 -->
-		maxWait=60000
-	
-	JDBC驱动建立链接时附带的连接属性的格式必须为这样：[属性名=property]
-	注意："user"与"password"俩个属性会被明确传递因此这里不需要包含它们
-		connectionProperties=useUnicode=true;characterEncoding=utf8
-	
-	指定由连接池所创建的链接的自动提交状态
-		defaultAutoCommit=false
-	
-	如果没有设置该值，则"setReadOnly"方法将不被调用。（某些驱动并不支持只读模式，如：Infomix）
-		defaultReadOnly
-	
-	driver default 指定有连接池所创建的事务级别（TransactionIsolation）
-	可用值：	NONE,READ_UNCOMMITTED,READ_COMMITTED,REPEATABLE_READ,SERIALIZABLE
-		defaultTransactionIsolation=READ_COMMITTED
-****
-三 配置连接池
-	//声明一个DataSource的全局变量
-	private static DataSource dataSource = null;
-	//静态代码块，类加载时执行
-	static{
-		//通过相对路径来获取数据
-		InputStream is =  类名.class.getClassLoader.getResourceAsStream("dpcp.properties");
-		Properties pro = new Properties();
-		pro.load(is);
-		
-		BasicDataSourceFactory bdsf = new BasicDataSourceFactory();
-		dataSource = bdsf.createDataSource(pro);
-	}
+####自定义连接池
+	步骤：
+		1. 导入驱动包
+		2. 配置properites文件
+			mysql
+			driverClassName=com.mysql.jdbc.Driver
+			url=jdbc:mysql://localhost:3306/examdb34
+			username=root
+			password=123456
 
-	/**提供一个链接*/
+			oracle
+			url=jdbc:oracle:thin:@localhost:1521:xe
+			driverClassName=oracle.jdbc.OracleDriver
+			username=system
+			password=123456
 
-	public static Connection getConnection(){
-		return dataSource.getConnection();
-	}
-	
-	/**关闭流*/
-	public static void closeFlow(Connection conn,Statement state,ResultSet res){if if if}
+			。。。
+		3. 写一个提供链接，获取配置文件数据的类
+			package cn.xdl.util;
+			import javax.sql.DataSource;
+			import java.io.PrintWriter;
+			import java.sql.*;
+			import java.util.LinkedList;
+			import java.util.List;
+			import java.util.logging.Logger;
+			
+			public class ConnectionPoolUtil implements DataSource {
+		    //初始化连接数目
+		    private static int init_quantity = ProvideConnection.getInit();
+		    //定义一个计数器，用来记录创建的连接数
+		    private static int conn_count = init_quantity;
+		    //创建一个容器来存储connection对象
+		    private static List<Connection> list = new LinkedList<>();
+		    //对连接池进行初始化
+		    static{
+		        for(int i=0;i<init_quantity;i++){
+		            Connection connection = ProvideConnection.getConnection();
+		            //System.out.println(connection);
+		            list.add(connection);
+		        }
+		    }
+		
+		    /**
+		     *
+		     * @return 返回null代表连接池上线了
+		     * @throws SQLException
+		     */
+		    @Override
+		    public  Connection getConnection() throws SQLException {
+		        synchronized(this) {
+		            Connection connection = null;
+		            int maxActive = ProvideConnection.getData();
+		            if (list.size() == 0) {
+		                if (conn_count < maxActive) {
+		                        connection = ProvideConnection.getConnection();
+		                        conn_count++;
+		                        System.out.print(Thread.currentThread().getName()+"   ");
+		                        System.out.print(conn_count+"   ");
+		                        System.out.println(connection);
+		                        list.add(connection);
+		                } else {
+		                    try {
+		                        System.out.println("连接池条数不够了休息了");
+		                        this.wait();
+		                    } catch (Exception e) {
+		                        e.printStackTrace();
+		                    }
+		                }
+		            }
+		            System.out.print(Thread.currentThread().getName()+"\t查到了\t");
+		            connection = list.remove(0);
+		            return connection;
+		        }
+		    }
+		
+		    public synchronized void testJdbc(){
+		        try {
+		            Connection connection = getConnection();
+		            PreparedStatement ps = connection.prepareStatement("select * from et_classnum");
+		            ResultSet resultSet = ps.executeQuery();
+		            while(resultSet.next()){
+		                int classID = resultSet.getInt("classID");
+		                String className = resultSet.getString("className");
+		                System.out.print("\t班级id"+classID+"  名字"+className);
+		            }
+		            System.out.println(" ");
+		            ConnectionPoolUtil cc = new ConnectionPoolUtil();
+		            cc.backFlow(connection);
+		        } catch (SQLException e) {
+		            e.printStackTrace();
+		        }
+		    }
+		
+		    /**
+		     *提供一个将流放回链接池的方法
+		     */
+		    public synchronized void backFlow(Connection connection){
+		        System.out.println(Thread.currentThread().getName()+"拿的链接放回去了");
+		        list.add(connection);
+		        this.notify();
+		    }
+		
+		    public void getSize(){
+		        System.out.println("已创建连接数\t"+conn_count);
+		    }
+		    @Override
+		    public Connection getConnection(String username, String password) throws SQLException {
+		        return null;
+		    }
+		
+		    @Override
+		    public <T> T unwrap(Class<T> iface) throws SQLException {
+		        return null;
+		    }
+		
+		    @Override
+		    public boolean isWrapperFor(Class<?> iface) throws SQLException {
+		        return false;
+		    }
+		
+		    @Override
+		    public PrintWriter getLogWriter() throws SQLException {
+		        return null;
+		    }
+		
+		    @Override
+		    public void setLogWriter(PrintWriter out) throws SQLException {
+		
+		    }
+		
+		    @Override
+		    public void setLoginTimeout(int seconds) throws SQLException {
+		
+		    }
+		
+		    @Override
+		    public int getLoginTimeout() throws SQLException {
+		        return 0;
+		    }
+		
+		    @Override
+		    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+		        return null;
+		    }
+			}
+		4. 写一个连接池
+			package cn.xdl.util;
+
+			import javax.sql.DataSource;
+			import java.io.PrintWriter;
+			import java.sql.*;
+			import java.util.LinkedList;
+			import java.util.List;
+			import java.util.logging.Logger;
+			
+			public class ConnectionPoolUtil implements DataSource {
+			    //初始化连接数目
+		    private static int init_quantity = ProvideConnection.getInit();
+		    //定义一个计数器，用来记录创建的连接数
+		    private static int conn_count = init_quantity;
+		    //创建一个容器来存储connection对象
+		    private static List<Connection> list = new LinkedList<>();
+		    //对连接池进行初始化
+		    static{
+		        for(int i=0;i<init_quantity;i++){
+		            Connection connection = ProvideConnection.getConnection();
+		            //System.out.println(connection);
+		            list.add(connection);
+		        }
+		    }
+		
+		    /**
+		     *
+		     * @return 返回null代表连接池上线了
+		     * @throws SQLException
+		     */
+		    @Override
+		    public  Connection getConnection() throws SQLException {
+		        synchronized(this) {
+		            Connection connection = null;
+		            int maxActive = ProvideConnection.getData();
+		            if (list.size() == 0) {
+		                if (conn_count < maxActive) {
+		                        connection = ProvideConnection.getConnection();
+		                        conn_count++;
+		                        System.out.print(Thread.currentThread().getName()+"   ");
+		                        System.out.print(conn_count+"   ");
+		                        System.out.println(connection);
+		                        list.add(connection);
+		                } else {
+		                    try {
+		                        System.out.println("连接池条数不够了休息了");
+		                        this.wait();
+		                    } catch (Exception e) {
+		                        e.printStackTrace();
+		                    }
+		                }
+		            }
+		            System.out.print(Thread.currentThread().getName()+"\t查到了\t");
+		            connection = list.remove(0);
+		            return connection;
+		        }
+		    }
+		
+		    public synchronized void testJdbc(){
+		        try {
+		            Connection connection = getConnection();
+		            PreparedStatement ps = connection.prepareStatement("select * from et_classnum");
+		            ResultSet resultSet = ps.executeQuery();
+		            while(resultSet.next()){
+		                int classID = resultSet.getInt("classID");
+		                String className = resultSet.getString("className");
+		                System.out.print("\t班级id"+classID+"  名字"+className);
+		            }
+		            System.out.println(" ");
+		            ConnectionPoolUtil cc = new ConnectionPoolUtil();
+		            cc.backFlow(connection);
+		        } catch (SQLException e) {
+		            e.printStackTrace();
+		        }
+		    }
+		
+		    /**
+		     *提供一个将流放回链接池的方法
+		     */
+		    public synchronized void backFlow(Connection connection){
+		        System.out.println(Thread.currentThread().getName()+"拿的链接放回去了");
+		        list.add(connection);
+		        this.notify();
+		    }
+		
+		    public void getSize(){
+		        System.out.println("已创建连接数\t"+conn_count);
+		    }
+		    @Override
+		    public Connection getConnection(String username, String password) throws SQLException {
+		        return null;
+		    }
+		
+		    @Override
+		    public <T> T unwrap(Class<T> iface) throws SQLException {
+		        return null;
+		    }
+		
+		    @Override
+		    public boolean isWrapperFor(Class<?> iface) throws SQLException {
+		        return false;
+		    }
+		
+		    @Override
+		    public PrintWriter getLogWriter() throws SQLException {
+		        return null;
+		    }
+		
+		    @Override
+		    public void setLogWriter(PrintWriter out) throws SQLException {
+		
+		    }
+		
+		    @Override
+		    public void setLoginTimeout(int seconds) throws SQLException {
+		
+		    }
+		
+		    @Override
+		    public int getLoginTimeout() throws SQLException {
+		        return 0;
+		    }
+		
+		    @Override
+		    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+		        return null;
+		    }
+			}
+
+		5. 测试类
+			package cn.xdl.util;
+			public class ThreadTest implements Runnable{
+			    private static ConnectionPoolUtil cc = new ConnectionPoolUtil();
+			    @Override
+			    public void run() {
+			        cc.testJdbc();
+			        //cc.getSize();
+			    }
+			    public static void main(String[] args) {
+			        ThreadTest tt = new ThreadTest();
+			        Thread thread1 = new Thread(tt);
+			        Thread thread2 = new Thread(tt);
+			        Thread thread3 = new Thread(tt);
+			        Thread thread4 = new Thread(tt);
+			        Thread thread5 = new Thread(tt);
+			        Thread thread6 = new Thread(tt);
+			        Thread thread7 = new Thread(tt);
+			        Thread thread8 = new Thread(tt);
+			        Thread thread9 = new Thread(tt);
+			        Thread thread10 = new Thread(tt);
+			        Thread thread11 = new Thread(tt);
+			        Thread thread12 = new Thread(tt);
+			        Thread thread13 = new Thread(tt);
+			        thread1.start();
+			        thread2.start();
+			        thread3.start();
+			        thread4.start();
+			        thread5.start();
+			        thread6.start();
+			        thread7.start();
+			        thread8.start();
+			        thread9.start();
+			        thread10.start();
+			        thread11.start();
+			        thread12.start();
+			        thread13.start();
+			    }
+			}
+
 
 

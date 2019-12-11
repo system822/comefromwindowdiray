@@ -216,3 +216,190 @@
 			聚簇索引（聚集索引）：并不是一种单独的索引类型，而是一种数据存储方式。具体细节取决于不同的实现，InnoDB的聚簇索引其实就是在同一个结构中保存了B-Tree索引（技术上来说是B+Tree）和数据行。
 			非聚簇索引：不是聚簇索引，就是非聚簇索引
 			show global variables like "%datadir%";
+###12/10/2019 10:31:05 AM 
+####[sql优化](https://www.bilibili.com/video/av29072634?p=12)
+	1. id:
+		数据小的表，优先查询（连接查询） 
+		id值不同：id值越大越优先查询（本质：在嵌套子查询时，先插内层 再查外层）
+	2. select_type:
+		primary:包含子查询SQL中的主查询（最外层）
+		subquery:包含子查询SQL中的子查询（非最外层）
+		simple:简单查询（不包含子查询、union ）
+		derived:衍生查询（使用到了临时表）
+			a. from子查询中只有一张表
+				-- 用于测试衍生查询derived
+				EXPLAIN SELECT cr.cname FROM (SELECT * FROM course WHERE tid IN (1,2)) cr;
+			b. 在from 子查询中，如果有table1 union table2,则table1 就是derived，table2就是union 
+				-- 用于测试derived和union
+				EXPLAIN SELECT cr.cname FROM (SELECT * FROM course c WHERE tid = 1 UNION SELECT * FROM course cc WHERE tid =2) cr;
+		union:见上表
+		union result:告知开发人员，那些表之间存在union查询  
+
+	3. table： 
+		告知使用的是什么表
+	4. type：索引类型
+		system > const > eq_ref > ref > fulltext > ref_or_null >index_merge > unique_subquery > index_subquery > range > index > All 
+
+		system:只有一条数据的系统表；或衍生表只有一条数据的主查询
+			-- 插入一条数据，创建一个索引
+			CREATE TABLE test01(
+					tid INT(3),
+					tname VARCHAR(20)
+			);ENGINE=INNODB DEFAULT CHARSET=utf8;
+			INSERT INTO test01 VALUES (1,'a');
+			COMMIT;
+			ALTER TABLE test01 ADD CONSTRAINT tid_pk PRIMARY KEY(tid);
+			EXPLAIN  SELECT * FROM (SELECT * FROM test01)t WHERE tid = 1; 
+		
+		const:仅仅能查到一条数据的SQL，用于primary key 或 unique 索引（类型与索引类型有关）
+			EXPLAIN SELECT tid FROM test01 WHERE tid = 1;
+			ALTER TABLE test01 DROP PRIMARY KEY;
+			CREATE INDEX test01_index ON test01(tid);
+
+		eq_ref:唯一性索引：对于每个索引键的查询，返回匹配唯一行数据（有且只有1个，不能多，不能0）
+			给name建一个索引，且name的值不唯一
+			select  ... from ... where name = ... 常见于唯一索引和主键索引  
+			CREATE TABLE a(
+				id INT PRIMARY KEY
+			);
+			CREATE TABLE b(
+				id INT PRIMARY KEY
+			);
+			INSERT INTO b VALUES (1);
+			INSERT INTO a VALUES (1);
+			COMMIT;
+			EXPLAIN SELECT t.id FROM a t,b tt WHERE t.id = tt.`id`;
+
+			以上SQL，a表查询个数和链接个数一致，则有可能满足eq_ref级别
+
+		ref: 非唯一索引 ，对于每个索引键的查询，返回匹配的所有行（0，多）
+		
+		range:检索指定范围的行，where后面是一个范围查询（between,in,> < >=）  (有索引的范围查询) （in 有时候会失效）
+			EXPLAIN SELECT t.* FROM teacher t WHERE t.tcid < 2;
+			EXPLAIN SELECT t.* FROM teacher t WHERE t.tcid > 2;
+			EXPLAIN SELECT t.* FROM teacher t WHERE t.tcid BETWEEN 1 AND 3;
+			EXPLAIN SELECT t.* FROM teacher t WHERE t.tcid IN (1,3,4);
+			-- tcid 是一个索引列
+
+		index:查询全部索引中的数据
+			EXPLAIN SELECT tcid FROM teacher;
+			-tcid 是索引 不需要扫描表中所有数据
+		all：查询全部表中的数据
+			EXPLAIN SELECT tid FROM teacher;
+			-tid 不是索引 需要扫描表中所有数据
+
+
+		---
+			system/const:结果只有一条数据
+			eq_ref:结果多条，但是每条是唯一的
+			ref:结果多条，但是每条数据是0或多条
+
+	5. possible_key:可能用到的索引，是一种预测，不准
+		如果 possible_key/key是null,则说明没用索引
+	6. key:实际用到的索引
+	7. key_len:索引的长度
+		作用：用于判断复合索引是否被完全使用
+
+		-- 用于测试字节长度
+			CREATE TABLE len(
+				NAME CHAR(20) NOT NULL DEFAULT ''
+			)ENGINE INNODB DEFAULT CHARSET =utf8;
+			ALTER TABLE len ADD INDEX  index_name(NAME);
+			EXPLAIN SELECT NAME FROM len WHERE NAME = '';
+
+			-- 在utf-8中：一个字符占三个字节 3*20=60
+
+			ALTER TABLE len ADD COLUMN name1 CHAR(20);
+			ALTER TABLE len ADD INDEX index_name1(name1);
+			EXPLAIN SELECT NAME1 FROM len WHERE NAME1 = '';
+
+			-- 可以为空占一个字节，所以是61个字节
+
+			-- 增加一个复合索引
+			drop index index_name on len;
+			drop index index_name1 on len;
+			
+			alter table len add index name_name1_index(name,name1);
+			explain select * from len where name = ''; -- 60
+			explain select * from len where name1 = ''; -- 121
+
+			-- 测试varchar(20)
+			alter table len add column name2 varchar(20); -- 可以为null
+			alter table len add index name_index(name2)
+			explain select * from len where name2 = ''; -- 63
+			-- 20*3+1(null)+2(用2个字节表示可变长度)
+	
+			扩展：
+				utf8:一个字符 三个字节
+				gbk:一个字符 两个字节
+				latin:一个字符 一个字节
+
+	8. ref:
+		作用： 指明当前表所参照的字段
+			select ... where a.c = b.d; (b.d可以是常量，const)
+			c引用d的什么索引
+
+	9. rows:
+		实际通过索引查询到的数据个数
+
+	10 Extra:
+		1. using filesort: 性能消耗大，需要额外一次的排序(常见于order by)
+			CREATE TABLE test03(
+				id INT,
+				NAME VARCHAR(30),
+				age INT,
+				INDEX index_test03(id)
+			)ENGINE INNODB DEFAULT CHARSET =utf8;
+			ALTER TABLE test03 ADD INDEX index_name(NAME);
+			ALTER TABLE test03 ADD INDEX index_age(age);
+			EXPLAIN SELECT id FROM test03 WHERE id = '' GROUP BY NAME;
+			-- 对于单索引，如果排序和查找是同一个字段则不会出现using filesort;反之相反
+	
+			-- 对于复合索引：不能跨列（最佳左前缀）
+	
+			EXPLAIN SELECT * FROM test03 WHERE id ='' ORDER BY age; -- filesort
+			EXPLAIN SELECT * FROM test03 WHERE NAME ='' ORDER BY age; -- filesort
+			EXPLAIN SELECT * FROM test03 WHERE id ='' ORDER BY NAME; -- ok
+		
+			避免： 单索引 where那些字段，就order by那些字段
+				   复合索引 where和order by按照复合索引的顺序使用，不要跨列或无序使用
+
+		2. using temporary :性能损耗大，用到了临时表。一般出现在group by语句中（需要额外使用一张表）
+
+			EXPLAIN SELECT * FROM test03 WHERE id IN ('',1,2) GROUP BY NAME; -- temporary
+			EXPLAIN SELECT * FROM test03 WHERE id IN ('',1,2) GROUP BY id; -- 无temporary
+
+
+		3. using index:性能提升；索引覆盖。
+			原因：不读取源文件，只从索引文件获取数据，只要使用的列全部在索引中，就是索引覆盖 using index
+
+			EXPLAIN SELECT id FROM test03 WHERE age = ''; -- 因为此时所有字段都在复合索引中 index
+			DROP INDEX index_all ON test03; -- 删除这个索引 添加其他的索引
+			ALTER TABLE test03 ADD INDEX index_id_name(id,NAME);
+			EXPLAIN SELECT id FROM test03 WHERE age = ''; -- 无 index
+		
+			如果用到了索引覆盖（using index时),会对possible_keys和key造成影响；
+				a. 如果没有where，则索引只出现在key中；
+				b. 如果有where,则索引出现在key和possible_keys中。（where指的是过滤where）
+
+
+		4. using where (需要回表查询)
+
+			假设age是索引列
+			select age,name from ... where age =...,此语句需要回原表中查Name，因此是where 
+
+		5. impossible where : where 子句永远为false
+
+			EXPLAIN	 SELECT id FROM test03 WHERE id BETWEEN 3 AND 1;
+
+					
+
+
+
+
+
+
+
+
+
+>system,const只是理想情况；实际能达到 ref>range
