@@ -12,3 +12,5 @@
 		
 	检查是否安装成功：
 		mysqladmin --version
+
+>>>无用  未完成

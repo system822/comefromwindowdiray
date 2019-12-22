@@ -578,3 +578,6 @@
 	第二范式:	表格中必须存在主键, 表中除了主键以外的字段 都必须完全依赖主键.	
 	第三范式:	确保每一列都和主键列 直接相关 而不是间接相关 (消除间接依赖关系)
 	 
+
+##mysql  alter table 表名 modify 字段名 数据类型 auto_increment; 
+##mysal  ALTER TABLE tbname AUTO_INCREMENT = 1;
