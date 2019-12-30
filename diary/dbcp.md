@@ -368,9 +368,9 @@
 			}
 
 		5. 测试类
-			package cn.xdl.util;
 			public class ThreadTest implements Runnable{
 			    private static ConnectionPoolUtil cc = new ConnectionPoolUtil();
+			    private static String thread;
 			    @Override
 			    public void run() {
 			        cc.testJdbc();
@@ -378,32 +378,11 @@
 			    }
 			    public static void main(String[] args) {
 			        ThreadTest tt = new ThreadTest();
-			        Thread thread1 = new Thread(tt);
-			        Thread thread2 = new Thread(tt);
-			        Thread thread3 = new Thread(tt);
-			        Thread thread4 = new Thread(tt);
-			        Thread thread5 = new Thread(tt);
-			        Thread thread6 = new Thread(tt);
-			        Thread thread7 = new Thread(tt);
-			        Thread thread8 = new Thread(tt);
-			        Thread thread9 = new Thread(tt);
-			        Thread thread10 = new Thread(tt);
-			        Thread thread11 = new Thread(tt);
-			        Thread thread12 = new Thread(tt);
-			        Thread thread13 = new Thread(tt);
-			        thread1.start();
-			        thread2.start();
-			        thread3.start();
-			        thread4.start();
-			        thread5.start();
-			        thread6.start();
-			        thread7.start();
-			        thread8.start();
-			        thread9.start();
-			        thread10.start();
-			        thread11.start();
-			        thread12.start();
-			        thread13.start();
+			        for (int i = 0; i < 13; i++) {
+			            thread = thread+i;
+			            Thread thread = new Thread(tt);
+			            thread.start();
+			        }
 			    }
 			}
 
