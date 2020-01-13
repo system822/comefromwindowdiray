@@ -180,7 +180,7 @@
 		spring.datasource.username=root
 		spring.datasource.password=123456
 		spring.datasource.driverClassName=com.mysql.jdbc.Driver
-		spring.datasource.url=jdbc:localhost://3306/examdb34
+		spring.datasource.url=jdbc:mysql://localhost:3306/xxx
 
 	3. 定义启动类，追加@EnableAutoConfiguration或者@SpringBootApplication开启自动配置
 

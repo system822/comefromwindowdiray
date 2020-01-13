@@ -180,3 +180,8 @@
 				-	src	:	动画资源地址
 				-	width	:	视频播放窗口的宽度
 				-	height	:	视频播放窗口的高度
+
+>发起请求
+>href
+>window.location.href
+>src

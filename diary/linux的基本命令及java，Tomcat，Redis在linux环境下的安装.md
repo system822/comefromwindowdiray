@@ -166,3 +166,8 @@
 		service redis_6379 start
 	9. 测试redis
 		redis
+
+
+
+>安装Linux出现问题
+>编辑 首选项 设备 开启虚拟打印
