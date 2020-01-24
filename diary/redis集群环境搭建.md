@@ -167,7 +167,7 @@
 >>[ERR] Node XXXXXX is not empty. Either the node already knows other nodes (check with CLUSTER NODES) or contains some key in database 0
 >>>>解决方法：
 >删除生成的配置文件nodes.conf，删除后再执行rudy redis-trib.rb add-node指令
-
+>CachePut注解在使用的时候是先进行数据库的查库操作，然后在更新缓存，由于要更新缓存，所以一定要指定所要操作的缓存的名称
 ####集群的优点
 	P2P模式，无中心化
 	把key分成16384个slot
