@@ -25,7 +25,7 @@
 
 ###启动Redis客户端 redis命令
 	启动Redis客户端访问本机Redis服务器命令如下：
-		redis -cli
+		redis-cli
 
 	redis登录及设置密码
 		查询默认密码		
