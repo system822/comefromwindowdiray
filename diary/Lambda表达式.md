@@ -27,3 +27,5 @@
 	Supplier<T> --提供 T 对象（列如工厂），不接受值
 	UnaryOperator<T> --接收 T 对象，返回 T 对象
 	BinaryOperator<T> --接收两个 T 对象，返回 T 对象 
+
+>[example](https://www.runoob.com/java/java8-lambda-expressions.html)
