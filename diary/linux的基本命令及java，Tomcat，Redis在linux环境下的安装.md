@@ -22,6 +22,7 @@
 	cd ../.. 返回上两级目录
 	cd 进入个人主目录
 	cd ~ 进入个人的主目录
+	cd - 回到上一次所在的目录
 	
 	mkdir xxx 创建xxx文件夹
 	mkdir -p a/b/c 创建多级目录
@@ -40,6 +41,9 @@
 	more fileName 按照百分比查看文件内容，空格键翻一页，回车翻一行
 	
 	tail -n 200 -f fileName 动态的查看文件内容
+		tail 默认在屏幕上显示指定文件的末尾10行
+		-f	显示最新追加的内容
+		-n 	行数	在屏幕上指定文件的末尾行数
 
 	ps -ef 查看进程列表
 	ps -ef|grep tomcat/端口号 查看当前tomcat运行的进程列表
@@ -52,13 +56,84 @@
 		111     101    101
          7       5      5		
 		）
+###文件搜索命令
+	whereis 命令名		#索索命令所在路径及帮助文档所在位置
+	which 命令名 	#搜索命令所在路径及别名
+	
+	find [搜索范围] [搜索条件]
+	find /root -name a.txt 		#搜索名为a.txt的文件 区分大小写
+	find /root -iname a.txt		#搜索名为a.txt的文件 不区分大小写
+	find /root -user root		#按照所有者查询
+	find /root -nouser			#查找没有所有者的文件
+###字符串搜索命令
+	grep [选项] 字符串 文件名  -i 忽略大小写 -v 排除指定的字符串
+	grep -i xxx a.txt		#查询a.txt中包含xxx的内容，忽略大小写
+	grep xxx a.txt			#查询a.txt中包含xxx的内容，不忽略大小写
+	grep -v xxx a.txt 		#查询a.txt中排除xxx的内容，不忽略大小写
+	grep -i -v xxx a.txt 	#查询a.txt中排除xxx的内容，忽略大小写
+###帮助命令
+	man ls 				#查看ls的帮助
+	ls --help			#获取ls命令选项的帮助
+###压缩和解压缩命令(.zip .gz .tar .tar.gz)
+	zip 压缩文件名 源文件
+	zip xx yy.txt		#将yy.txt压缩成xx.zip
+	zip  -r xx yy		#将yy目录压缩成xx.zip
+	unzip xx.zip		#将xx.zip解压
+
+	gzip a.txt 			#将a.txt压缩成a.txt.gz格式，原有文件会消失
+	gzip -r haha		#不会将haha目录压缩，只是将haha目录下所有文件压缩成.gz格式
+	gunzip	a.txt.gz 	#解压
+	gzip -d a.txt.gz	#解压
+
+	tar 参数 打包文件名 源文件
+	参数
+		-c 打包
+		-v 显示过程
+		-f 指定打包后的文件名
+		-x 解打包
+		-z 压缩成.tar.gz格式
+	tar -cvf a.tar a.txt				#将a.txt打包成a.tar
+	tar -xvf a.tar						#解打包
+	tar -cvf ha.tar ha 					#将ha文件夹打包
+	tar -zcvf ha.tar.gz ha				#将ha文件夹打包压缩
+	tar -zxvf ha.tar.gz					#解压解打包
+	tar -zxvf ha.tar.gz -C 路径			#解压到哪
+###关机 重启。。
+	shutdown [选项] 时间
+	参数
+		-c 取消前一个关机命令 
+		-h 关机
+		-r 重启
+		-k 向所有用户发送警告信息
+	shutdown -h now 						#立即关机
+	shutdown -h 12:00						#12点关机
+	shutdown -h +7 "7分钟后关机"				#7分钟后关机
+	
+	其他一些关机命令
+		halt
+		poweroff
+		init 0
+	这3个命令不是很安全，因为它们不会帮我们保存数据
+	
+	其他重启命令
+		reboot
+		init 6
+	
 ###服务器 待扩展	
+	date -R 当前时间
 	ifconfig 查看当前服务器ip信息
+	ip addr	查看当前服务器ip信息
 	top 查看服务器当前性能
 	ss -tanl 查看linux下开放的端口有哪些
 	service xxx stop/start 停止或启动某个服务
 	service xxx restart 重新启动某个服务
 	exit 退出（ctrl c）
+
+
+	df [-h]						#磁盘使用情况 -h格式化输出
+	echo						#在显示器上输出内容
+	free 						#查看内存占用
+	top							#查看任务进程
 ###用户相关命令
 	whoami	查看当前登录的用户名
 	sudo su root  切换到 root用户
@@ -86,8 +161,6 @@
 	wget http://xxx 在线下载
 	yum install xxx -y 在线安装
 	yum remove xxx 卸载
-	
-	tar -xvf fileName //待扩展
 
 ###vi vim
 	Vi是Unix及Linux系统下标准的编辑器，由美国加州大学伯克利分校的Bill Joy所创立。
