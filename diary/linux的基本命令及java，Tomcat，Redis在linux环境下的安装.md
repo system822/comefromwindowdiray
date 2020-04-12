@@ -48,14 +48,25 @@
 	ps -ef 查看进程列表
 	ps -ef|grep tomcat/端口号 查看当前tomcat运行的进程列表
 	
+###文件授权
 	chmod 777 fileName 给文件目录授权（当前）
 	chmod -R 777 directoryName 给文件目录授权（包括子目录）
-	（一些 扩展
-		属主    同组    其他
-		rwx     r-x    r-x
-		111     101    101
-         7       5      5		
-		）
+
+		u所有者 		 g所属组  	  r其他人
+		  rwx         r-x          r-x
+	      111         101          101
+	       7           5            5		
+		r 读 
+		w 写
+		x 执行
+
+	方式一：
+		chmod u+x 文件			#给当前用户添加指定文件的x执行权限
+		chmod g+w,o+w 文件		#给该文件用户组合其他人添加指定文件的w写的权限
+		chmod a=rwx 文件			#给该文件的当前用户,当前组,其他人 添加rwx可读可写可执行的权限
+
+
+
 ###文件搜索命令
 	whereis 命令名		#索索命令所在路径及帮助文档所在位置
 	which 命令名 	#搜索命令所在路径及别名
@@ -98,6 +109,26 @@
 	tar -zcvf ha.tar.gz ha				#将ha文件夹打包压缩
 	tar -zxvf ha.tar.gz					#解压解打包
 	tar -zxvf ha.tar.gz -C 路径			#解压到哪
+
+###rpm相关命令
+
+	安装一个包 
+		rpm -ivh <包名>
+		--nodeps 如果该RPM包的安装依赖其它包，即使其它包没装，也强迫安装。 
+		--force 即使覆盖属于其它包的文件也强迫安装 
+	查询一个包是否被安装 
+		rpm -q <软件名>
+	得到被安装的包的信息 
+		rpm -qi < 软件名> 
+	列出该包中有哪些文件 
+		rpm -ql < 软件名> 
+	列出服务器上的一个文件或目录属于哪一个RPM包 
+		rpm -qf <文件或目录名>
+	列出所有被安装的rpm package 
+		rpm -qa 
+	卸载一个包 
+		rpm -e <软件名>
+
 ###关机 重启。。
 	shutdown [选项] 时间
 	参数
@@ -128,12 +159,14 @@
 	service xxx stop/start 停止或启动某个服务
 	service xxx restart 重新启动某个服务
 	exit 退出（ctrl c）
+	sync 命令的作用就是把内存中的数据强制向硬盘中保存
 
 
 	df [-h]						#磁盘使用情况 -h格式化输出
 	echo						#在显示器上输出内容
 	free 						#查看内存占用
 	top							#查看任务进程
+	netstat -ntlp				#查看端口（需下载net-tools）
 ###用户相关命令
 	whoami	查看当前登录的用户名
 	sudo su root  切换到 root用户
@@ -145,10 +178,75 @@
 	userdel userName 删除用户(保留家目录)
 	userdel -r userName 删除用户（不保留家目录）
 	（注意：删除某个用户时需要将该用户所有进程杀死 ）
-
+		-f：强制删除用户，即使用户已登录 
+		-r：删除与用户相关的所有文件。
 	pgrep -u userName 查询某个用户的所有进程
+
+###进程相关命令
+	进程查看:ps:
+		用于报告当前系统的进程状态。可以搭配kill指令随时中断、删除不必要的程序。
+
+
+	ps -ef 显示出的结果：
+	    1.UID       用户ID
+	    2.PID        进程ID
+	    3.PPID      父进程ID
+	    4.C           CPU占用率
+	    5.STIME     开始时间
+	    6.TTY         开始此进程的TTY----终端设备
+	    7.TIME       此进程运行的总时间
+	    8.CMD       命令名.
+
 	kill 进程号 杀死进程
 	kill -9 进程号 强制杀死进程	
+
+###用户组相关命令
+	创建用户组	groupadd 组名	#查看系统用户组：cat /etc/group
+	删除组	groupdel 组名
+
+	查看系统用户：cat /etc/passwd
+	1	用户名
+	2	用户的密码，用x替代
+	3	用户的uid,一般情况下root为0，1-499默认为系统账号，有的更大些到1000，500-65535为用户的可登录账号，有的系统从1000开始。
+	4	用户的gid,linux的用户都会有两个ID,一个是用户uid，一个是用户组id，在我们登录的时候，输入用户名和密码，
+	其实会先到/etc/passwd查看是否有你输入的账号或者用户名，有的话将该账号与对应的UID和GID(在/etc/group中)读出来。
+	然后读出主文件夹与shell的设置，然后再去检验密码是否正确，正确的话正常登录。
+	5	用户的账号说明解释
+	6	用户的家目录文件夹
+	7	用户使用的shell，如果换成/sbin/nologin/就是默认没有登录环境的。
+	
+	案例
+	1、将 newuser2 添加到组 staff 中
+		usermod -G staff newuser2
+
+	2、修改 newuser 的用户名为 newuser1
+		usermod -l newuser1 newuser
+
+	3、锁定账号 newuser1
+		usermod -L newuser1
+
+	4、解除对 newuser1 的锁定
+		usermod -U newuser1
+
+	5、将一个用户添加到用户组中，千万不能直接用,这样做会使你离开其他用户组,仅仅做为 这个用户组 groupA的成员。： 
+		usermod -G groupA user
+	6、-a 代表 append， 也就是 将自己添加到 用户组groupA 中，而不必离开 其他用户组。 
+		usermod -a -G groupA user
+
+*****
+	修改文件的所有者:	用法:chown 用户名 文件名
+	修改文件的所属组:	用法:chgrp 组名 文件名
+
+###分配用户权限
+	sudo权限:
+		root把本来只能超级用户执行的命令赋予普通用户执行.
+		sudo的操作对象是系统命令
+
+	visudo
+		实际修改的是/etc/sudoers文件
+		root ALL=(ALL) ALL				用户名 被管理主机的地址=(可使用的身份) 授权命令(绝对路径)
+		%wheel ALL=(ALL) ALL			%组名 被管理注解的地址=(可使用身份) 授权命令(绝对路径)
+
 ###防火墙相关命令
 	firewall-cmd --state 查看防火墙状态
 	service firewalld stop 停止防火墙
@@ -157,10 +255,24 @@
 	firewall-cmd --permanent --remove-port=portNumber/tcp 移除某个端口
 	firewall-cmd --reload 修改防火墙配置后，要重新加载
 
+###服务命令
+	
+	启动服务：systemctl start <服务名>
+	关闭服务：systemctl stop <服务名>
+	重启服务：systemctl restart <服务名>
+	查看服务状态：systemctl status <服务名>
+	添加开机启动项：systemctl enable <服务名>
+	禁止开机启动项：systemctl disable <服务名>
+	查看开机启动项：systemctl list-unit-files
+
+
 ###下载 安装 卸载 解压
-	wget http://xxx 在线下载
-	yum install xxx -y 在线安装
-	yum remove xxx 卸载
+
+	wget http://xxx 			在线下载
+	yum install xxx -y 			在线安装
+	yum remove xxx 				卸载
+	yum list  					查看yum库中的所有包
+	yum list installed			查看已经安装的软件包
 
 ###vi vim
 	Vi是Unix及Linux系统下标准的编辑器，由美国加州大学伯克利分校的Bill Joy所创立。
@@ -191,12 +303,28 @@
 		%s/要被替换/被替换/g								全局查找替换
 
 ###开启linux的网络的方法
+
 	/etc/sysconfig/network-script
 	vi ifctg-ens33
 	设置 onBoot=yes
 	重启网络服务 service network restart
+
+###网络管理 配置静态ip
+	1. vi /etc/sysconfig/network-scripts/ifcfg-ens32
+	2. BOOTPROTO="static"
+		IPADDR=192.168.226.131
+		NETMASK=255.255.255.0
+		DNS1=114.114.114.114
+
+		GETWAY=192.168.226.2(编辑 虚拟网络编辑器 VMnet8 net设置)
+		BROADCAST=192.168.226.255 
 	
+	3. 重启网络服务
+		systemctl restart network
+		service network restart
+			
 ###linux下安装java环境
+
 	1. 使用winscp将jdk的安装包上传到Linux
 	2. 拷贝到合适位置使用解压命令解压  tar -xvf fileName
 	3. 配置环境变量
@@ -210,6 +338,18 @@
 	5. 查看java版本
 		java -version
 
+	others:
+
+	1 要从网上去下载对应的安装包
+	2 把下载好的安装包上传到Linux的服务器当中(/usr/local/software)
+	3 解压操作 tar -zxvf jdk的安装包名 -C  /usr/local
+	4 改一个名字 mv  jdk1.8_123   jdk1.8
+	5 配置环境变量 vi /etc/profile   按一个大写的G 和小写的o 在最下面去配置信息
+	export JAVA_HOME=/usr/local/jdk1.8
+	export PATH=/usr/local/jdk1.8/bin:$PATH
+ 
+	6 source /etc/profile 重新去加载一下配置文件
+
 ###linux下安装Tomcat环境
 	1. 使用winscp将tomcat的安装包上传到Linux
 	2. 拷贝到合适的位置，使用解压命令解压
@@ -218,6 +358,21 @@
 		chmod -R 777 xxx
 	4. bin下启动tomcat
 		./startup.sh（关闭 ./shutdown.sh）
+
+	others:
+
+	1上网上把安装包给下载好
+	2 把包上传到linux服务器当中
+	3 tar -zxvf 安装包 -C  /usr/local
+	4 启动 tomcat
+	运行tomcat 一共两种方式
+		一种  切换到tomcat的bin目录当中 输入./startup.sh
+		二种  /usr/local/tomcat/startup.sh
+
+	5 查看tomcat 有没有启动 ,去查看日志文件
+		cat catalina.out
+		ps -ef |grep java
+		netstat -ntlp      =====>yum install -y net-tools
 
 ###linux下安装配置redis
 	1. 由于redis编译会使用到gcc和tcl，所以先使用yum安装
@@ -242,7 +397,47 @@
 	9. 测试redis
 		redis
 
+###mysql的安装
 
+	1、先把postfix 和mariadb-libs卸载掉，不然的会有依赖包冲突：[root@wolfcode]#  rpm -e postfix mariadb-libs
+
+	2、安装mysql的依赖net-tools和 perlyum -y install net-tools perl
+
+	3、安装mysql-common包：[root@wolfcode]#  rpm -ivh mysql-community-common-5.7.22-1.el7.x86_64.rpm
+
+	4、安装mysql-libs包：[root@wolfcode]# rpm -ivh mysql-community-libs-5.7.22-1.el7.x86_64.rpm
+
+	5、安装mysql-client包；[root@wolfcode]# rpm -ivh mysql-community-client-5.7.22-1.el7.x86_64.rpm
+
+	6、安装mysql-server包[root@wolfcode]# rpm -ivh mysql-community-server-5.7.22-1.el7.x86_64.rpm
+
+	5、设置开机启动：
+	[root@wolfcode]#  systemctl enable mysqld
+
+	6、启动MySql服务
+	[root@wolfcode]#  systemctl start mysqld
+
+	7、由于MySQL5.7安装好后会给root用户分配一个临时密码，所以我们先查看临时密码[root@wolfcode]#  grep 'temporary password' /var/log/mysqld.log2018-06-01T19:40:08.341478Z 1 [Note] A temporary password is generated for root@localhost: Ct<pX.k7S(=w冒号后面的就是root用户的临时密码：Ct<pX.k7S(=w
+
+	8、使用临时密码登录
+	[root@wolfcode]#  mysql -u root -p
+	输入密码：Ct<pX.k7S(=w
+	
+	9、设置root的密码
+	mysql>ALTER USER 'root'@'localhost' IDENTIFIED BY 'WolfCode_2017';
+	mysql> exit
+>注意：mysql5.7增加了安全级别，密码必须包含：大小写字母、数字和特殊符号，并且长度不能少于8位。
+
+	10、用新密码登陆
+	[root@wolfcode]#  mysql -u root -p输入密码：WolfCode_2017
+
+	11、开放远程登录权限mysql> GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'WolfCode_2017'  WITH GRANT OPTION;
+	mysql> FLUSH PRIVILEGES;
+
+	12、开放mysql的3306端口[root@wolfcode]# firewall-cmd --zone=public --add-port=3306/tcp --permanent[root@wolfcode]# firewall-cmd --reload
+
+>如果出现乱码:
+在链接地址栏后添加useUnicode=true&characterEncoding=utf-8
 
 >安装Linux出现问题
 >编辑 首选项 设备 开启虚拟打印
