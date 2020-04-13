@@ -322,6 +322,12 @@
 	3. 重启网络服务
 		systemctl restart network
 		service network restart
+
+###linux的克隆
+	1. 选中要克隆的虚拟机，右键管理 克隆  （完整克隆）
+	2. 克隆完毕后，点击设置，网络适配器 高级 生成mac地址（为了区分）
+	3. 开启虚拟机，修改ip地址即可
+	4. 重启网络服务
 			
 ###linux下安装java环境
 
